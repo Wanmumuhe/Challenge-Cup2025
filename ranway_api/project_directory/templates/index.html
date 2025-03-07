@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频生成</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            margin-top: 20px;
+        }
+
+        .form-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .chat-container {
+            width: 400px;
+            height: 300px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            margin-top: 30px;
+            background-color: #f9f9f9;
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            max-height: 200px;
+        }
+
+        .message {
+            padding: 5px;
+            margin: 5px 0;
+        }
+
+        .user-message {
+            background-color: #d1e7ff;
+            text-align: left;
+        }
+
+        .bot-message {
+            background-color: #e0e0e0;
+            text-align: right;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .input-container input {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .input-container button {
+            width: 15%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .input-container button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>上传图片并生成视频</h1>
+
+    <!-- 表单部分 -->
+    <div class="form-container">
+        <form method="POST" enctype="multipart/form-data">
+            <label for="image">上传图片：</label>
+            <input type="file" name="image" id="image" required><br><br>
+            <label for="prompt">输入提示词：</label>
+            <input type="text" name="prompt" id="prompt" required><br><br>
+            <button type="submit">生成视频</button>
+        </form>
+    </div>
+
+    <!-- 聊天框部分 -->
+    <div class="chat-container">
+        <div class="chat-box" id="chatBox">
+            <!-- 消息会显示在这里 -->
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="chatInput" placeholder="输入你的问题...">
+            <button onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        console.log("页面已加载");
+        // 处理发送聊天消息
+        function sendMessage() {
+            var inputField = document.getElementById("chatInput");
+            var chatBox = document.getElementById("chatBox");
+            var userMessage = inputField.value.trim();
+
+            if (userMessage === "") return;
+
+            // 创建用户消息
+            var userDiv = document.createElement("div");
+            userDiv.classList.add("message", "user-message");
+            userDiv.textContent = userMessage;
+            chatBox.appendChild(userDiv);
+
+            // 清空输入框
+            inputField.value = "";
+
+            // 模拟机器人的回复
+            setTimeout(function() {
+                var botDiv = document.createElement("div");
+                botDiv.classList.add("message", "bot-message");
+                botDiv.textContent = "这是机器人回复： " + userMessage;
+                chatBox.appendChild(botDiv);
+
+                // 自动滚动到底部
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1000);
+        }
+
+        // 处理回车键发送消息
+        document.getElementById("chatInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+    </script>
+
+</body>
+</html>

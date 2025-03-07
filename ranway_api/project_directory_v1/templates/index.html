@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI导游助手</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            margin-top: 20px;
+            color: #333;
+        }
+
+        .chat-container {
+            width: 80%;
+            max-width: 800px;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            margin-top: 30px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #f1f1f1;
+            color: #333;
+            margin-right: auto;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+
+        .input-container input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .upload-button {
+            background-color: #28a745;
+        }
+
+        .upload-button:hover {
+            background-color: #218838;
+        }
+
+        img, video {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin: 5px 0;
+        }
+
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI导游助手</h1>
+    <div class="chat-container">
+        <div class="chat-box" id="chatBox">
+            <div class="message bot-message">您好！我是您的AI导游助手，请上传一张图片，我来帮您制作有趣的动图！</div>
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="chatInput" placeholder="输入您的需求...">
+            <button onclick="sendMessage()">发送</button>
+            <button class="upload-button" onclick="document.getElementById('fileInput').click()">
+                上传图片
+            </button>
+        </div>
+        <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="handleImageUpload(event)">
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let uploadedImage = null;
+        let isProcessing = false;
+
+        function addMessage(content, isUser, type = 'text') {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            if (type === 'text') {
+                messageDiv.textContent = content;
+            } else if (type === 'image') {
+                const img = document.createElement('img');
+                img.src = content;
+                messageDiv.appendChild(img);
+            } else if (type === 'video') {
+                const video = document.createElement('video');
+                video.src = content;
+                video.controls = true;
+                video.autoplay = true;
+                video.style.maxWidth = '100%';
+                messageDiv.appendChild(video);
+            }
+            
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImage = e.target.result;
+                    addMessage(uploadedImage, true, 'image');
+                    addMessage("您想要什么样的动图效果呢？", false);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function sendMessage() {
+            if (isProcessing) return;
+            
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addMessage(message, true);
+            input.value = '';
+
+            if (uploadedImage) {
+                isProcessing = true;
+                try {
+                    const response = await fetch('/send_message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            image: uploadedImage
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.task_id) {
+                        currentTaskId = data.task_id;
+                        addMessage("正在生成您的创意动图，请稍候...", false);
+                        checkStatus();
+                    } else if (data.error) {
+                        addMessage(`抱歉，出现错误：${data.error}`, false);
+                        isProcessing = false;
+                    }
+                } catch (error) {
+                    addMessage("抱歉，处理您的请求时出现了问题。", false);
+                    isProcessing = false;
+                }
+                uploadedImage = null;
+            }
+        }
+
+        async function checkStatus() {
+            if (!currentTaskId) {
+                isProcessing = false;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/check_status/${currentTaskId}`);
+                const data = await response.json();
+
+                if (data.status === 'SUCCESS') {
+                    addMessage(data.video_url, false, 'video');
+                    addMessage(data.message, false);
+                    currentTaskId = null;
+                    isProcessing = false;
+                    
+                    // 触发视频下载
+                    const link = document.createElement('a');
+                    link.href = data.video_url;
+                    link.download = 'generated_video.mp4';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else if (data.status === 'PROCESSING') {
+                    setTimeout(checkStatus, 5000);
+                } else {
+                    addMessage(data.message, false);
+                    currentTaskId = null;
+                    isProcessing = false;
+                }
+            } catch (error) {
+                addMessage("检查状态时出现错误，请重试。", false);
+                currentTaskId = null;
+                isProcessing = false;
+            }
+        }
+
+        document.getElementById('chatInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
